@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/rs/zerolog"
@@ -16,6 +17,28 @@ import (
 	"github.com/ccmux/ccmux/internal/state"
 	"github.com/ccmux/ccmux/internal/tmux"
 )
+
+// Set by goreleaser via -ldflags.
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildTime = "unknown"
+)
+
+func version() string {
+	if Version != "dev" {
+		return Version
+	}
+	// Fall back to VCS info embedded by go build.
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) >= 8 {
+				return "dev-" + s.Value[:8]
+			}
+		}
+	}
+	return "dev"
+}
 
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -41,7 +64,7 @@ func main() {
 			}
 			return
 		case "version", "--version", "-v":
-			fmt.Println("ccmux v0.1.0")
+			fmt.Println("ccmux " + version())
 			return
 		case "help", "--help", "-h":
 			printHelp()
