@@ -59,7 +59,7 @@ Registers a hook in `~/.claude/settings.json` so ccmux can link Claude sessions 
 **5. Run**
 
 ```bash
-ccmux
+ccmux gateway
 ```
 
 Or as a persistent background service — see [Systemd](#systemd).
@@ -117,7 +117,7 @@ Description=ccmux Telegram Claude Code bridge
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/ccmux
+ExecStart=/usr/local/bin/ccmux gateway
 Restart=on-failure
 RestartSec=5
 EnvironmentFile=/root/.ccmux/.env
