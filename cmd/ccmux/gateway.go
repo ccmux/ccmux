@@ -112,16 +112,16 @@ func resolveStaleWindowIDs(ctx context.Context, stateMgr *state.Manager, tmuxMgr
 	}
 
 	bindings := stateMgr.AllBindings()
-	for topicStr, binding := range bindings {
+	for _, binding := range bindings {
 		if liveByID[binding.WindowID] {
 			continue
 		}
+		ref := binding.ChatRef
 		if newID, ok := liveByName[binding.WindowName]; ok {
 			log.Info().Str("old", binding.WindowID).Str("new", newID).Msg("remapped stale window ID")
-			topicID := 0
-			fmt.Sscanf(topicStr, "%d", &topicID)
-			if topicID > 0 {
-				stateMgr.SetBinding(topicID, state.TopicBinding{
+			if ref.ChatID != 0 {
+				stateMgr.SetBinding(ref, state.ConvBinding{
+					ChatRef:    ref,
 					WindowID:   newID,
 					WindowName: binding.WindowName,
 				})
@@ -129,10 +129,8 @@ func resolveStaleWindowIDs(ctx context.Context, stateMgr *state.Manager, tmuxMgr
 		} else {
 			log.Warn().Str("window", binding.WindowID).Str("name", binding.WindowName).
 				Msg("window no longer exists, removing binding")
-			topicID := 0
-			fmt.Sscanf(topicStr, "%d", &topicID)
-			if topicID > 0 {
-				stateMgr.DeleteBinding(topicID)
+			if ref.ChatID != 0 {
+				stateMgr.DeleteBinding(ref)
 			}
 		}
 	}

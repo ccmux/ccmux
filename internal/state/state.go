@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 )
 
 type Manager struct {
-	mu       sync.RWMutex
-	path     string
-	state    *BotState
+	mu    sync.RWMutex
+	path  string
+	state *BotState
 }
 
 func NewManager(path string) (*Manager, error) {
@@ -37,14 +36,20 @@ func (m *Manager) load() error {
 		return fmt.Errorf("parsing state: %w", err)
 	}
 	// Ensure maps are initialized
-	if s.TopicBindings == nil {
-		s.TopicBindings = make(map[string]TopicBinding)
+	if s.ConvBindings == nil {
+		s.ConvBindings = make(map[string]ConvBinding)
 	}
 	if s.WindowStates == nil {
 		s.WindowStates = make(map[string]WindowState)
 	}
 	if s.TrackedSessions == nil {
 		s.TrackedSessions = make(map[string]TrackedSession)
+	}
+	if s.Aliases == nil {
+		s.Aliases = make(map[string]string)
+	}
+	if s.TopicNames == nil {
+		s.TopicNames = make(map[string]string)
 	}
 	m.state = s
 	return nil
@@ -89,57 +94,53 @@ func atomicWrite(path string, data []byte) error {
 	return nil
 }
 
-// --- TopicBindings ---
+// --- ConvBindings ---
 
-func (m *Manager) GetBinding(topicID int) (TopicBinding, bool) {
+func (m *Manager) GetBinding(ref ChatRef) (ConvBinding, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	b, ok := m.state.TopicBindings[strconv.Itoa(topicID)]
+	b, ok := m.state.ConvBindings[ref.Key()]
 	return b, ok
 }
 
-func (m *Manager) SetBinding(topicID int, b TopicBinding) {
+func (m *Manager) SetBinding(ref ChatRef, b ConvBinding) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.state.TopicBindings[strconv.Itoa(topicID)] = b
+	m.state.ConvBindings[ref.Key()] = b
 }
 
-func (m *Manager) DeleteBinding(topicID int) {
+func (m *Manager) DeleteBinding(ref ChatRef) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.state.TopicBindings, strconv.Itoa(topicID))
+	delete(m.state.ConvBindings, ref.Key())
 }
 
-func (m *Manager) AllBindings() map[string]TopicBinding {
+func (m *Manager) AllBindings() map[string]ConvBinding {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	out := make(map[string]TopicBinding, len(m.state.TopicBindings))
-	for k, v := range m.state.TopicBindings {
+	out := make(map[string]ConvBinding, len(m.state.ConvBindings))
+	for k, v := range m.state.ConvBindings {
 		out[k] = v
 	}
 	return out
 }
 
-// FindTopicForWindow returns the topic ID bound to a given window ID, if any.
-func (m *Manager) FindTopicForWindow(windowID string) (int, bool) {
+// FindConvForWindow returns the ChatRef bound to a tmux window ID.
+func (m *Manager) FindConvForWindow(windowID string) (ChatRef, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	for k, b := range m.state.TopicBindings {
+	for _, b := range m.state.ConvBindings {
 		if b.WindowID == windowID {
-			id, err := strconv.Atoi(k)
-			if err == nil {
-				return id, true
-			}
+			return b.ChatRef, true
 		}
 	}
-	return 0, false
+	return ChatRef{}, false
 }
 
-// FindTopicForSession resolves session_id → window_id → topic_id.
-func (m *Manager) FindTopicForSession(sessionID string) (int, bool) {
+// FindConvForSession resolves session ID -> window ID -> ChatRef.
+func (m *Manager) FindConvForSession(sessionID string) (ChatRef, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	// Find window with this session
 	windowID := ""
 	for wid, ws := range m.state.WindowStates {
 		if ws.SessionID == sessionID {
@@ -148,17 +149,50 @@ func (m *Manager) FindTopicForSession(sessionID string) (int, bool) {
 		}
 	}
 	if windowID == "" {
-		return 0, false
+		return ChatRef{}, false
 	}
-	for k, b := range m.state.TopicBindings {
+	for _, b := range m.state.ConvBindings {
 		if b.WindowID == windowID {
-			id, err := strconv.Atoi(k)
-			if err == nil {
-				return id, true
-			}
+			return b.ChatRef, true
 		}
 	}
-	return 0, false
+	return ChatRef{}, false
+}
+
+// --- Aliases ---
+
+// SetAlias stores a human-readable alias -> window name mapping.
+// Returns an error if the alias is already taken.
+func (m *Manager) SetAlias(name, windowName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if existing, ok := m.state.Aliases[name]; ok && existing != windowName {
+		return fmt.Errorf("alias '%s' already taken. Choose a different name", name)
+	}
+	m.state.Aliases[name] = windowName
+	return nil
+}
+
+func (m *Manager) GetAlias(name string) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	v, ok := m.state.Aliases[name]
+	return v, ok
+}
+
+// --- TopicNames ---
+
+func (m *Manager) SetTopicName(windowName, topicName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.state.TopicNames[windowName] = topicName
+}
+
+func (m *Manager) GetTopicName(windowName string) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	v, ok := m.state.TopicNames[windowName]
+	return v, ok
 }
 
 // --- WindowStates ---

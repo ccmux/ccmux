@@ -10,6 +10,7 @@ import (
 const (
 	cbApproval    = "ap"
 	cbInteractive = "ui"
+	cbRateLimit   = "rl"
 )
 
 func approvalKeyboard(windowID string) telego.InlineKeyboardMarkup {
@@ -44,6 +45,21 @@ func interactiveKeyboard(windowID string) telego.InlineKeyboardMarkup {
 			},
 		},
 	}
+}
+
+type rateLimitOption struct {
+	Number string
+	Label  string
+}
+
+func rateLimitKeyboard(windowID string, options []rateLimitOption) telego.InlineKeyboardMarkup {
+	rows := make([][]telego.InlineKeyboardButton, 0, len(options))
+	for _, opt := range options {
+		rows = append(rows, []telego.InlineKeyboardButton{
+			btn(opt.Label, fmt.Sprintf("%s:%s:%s", cbRateLimit, opt.Number, windowID)),
+		})
+	}
+	return telego.InlineKeyboardMarkup{InlineKeyboard: rows}
 }
 
 func btn(text, data string) telego.InlineKeyboardButton {

@@ -8,19 +8,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ccmux/ccmux/internal/state"
+	"github.com/rs/zerolog/log"
 )
 
 // Monitor polls Claude JSONL transcripts and emits ParsedEntry values.
 type Monitor struct {
-	cfg          MonitorConfig
-	stateMgr     *state.Manager
-	fileMtimes   map[string]int64 // session_id → last seen mtime (ns)
-	parsers      map[string]*Parser // session_id → parser (preserves pending tool state)
-	mu           sync.Mutex
-	Entries      chan ParsedEntry
-	done         chan struct{}
+	cfg        MonitorConfig
+	stateMgr   *state.Manager
+	fileMtimes map[string]int64 // session_id → last seen mtime (ns)
+	parsers    map[string]*Parser
+	mu         sync.Mutex
+	Entries    chan ParsedEntry
+	done       chan struct{}
 }
 
 type MonitorConfig struct {
@@ -129,7 +129,6 @@ func (m *Monitor) poll() {
 				LastByteOffset: newOffset,
 			})
 		}
-
 		_ = windowID
 		for _, entry := range entries {
 			select {

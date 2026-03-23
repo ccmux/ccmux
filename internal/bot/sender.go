@@ -5,18 +5,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ccmux/ccmux/internal/format"
+	"github.com/ccmux/ccmux/internal/state"
 	"github.com/mymmrac/telego"
 	"github.com/rs/zerolog/log"
-	"github.com/ccmux/ccmux/internal/format"
 )
 
-// sendToTopic sends a message to a Telegram forum topic, splitting if needed.
+// sendToRef sends a message to the Telegram chat identified by ref, splitting if needed.
 // Returns the message ID of the last sent message.
-func (b *Bot) sendToTopic(ctx context.Context, topicID int, text string) (int, error) {
+func (b *Bot) sendToRef(ctx context.Context, ref state.ChatRef, text string) (int, error) {
 	chunks := format.SplitMessage(text)
 	var lastID int
 	for _, chunk := range chunks {
-		id, err := b.sendChunk(ctx, topicID, chunk, nil)
+		id, err := b.sendChunk(ctx, ref, chunk, nil)
 		if err != nil {
 			return lastID, err
 		}
@@ -25,16 +26,16 @@ func (b *Bot) sendToTopic(ctx context.Context, topicID int, text string) (int, e
 	return lastID, nil
 }
 
-// sendToTopicWithKeyboard sends a message with an inline keyboard.
-func (b *Bot) sendToTopicWithKeyboard(ctx context.Context, topicID int, text string, kb telego.InlineKeyboardMarkup) (int, error) {
-	return b.sendChunk(ctx, topicID, text, &kb)
+// sendToRefWithKeyboard sends a message with an inline keyboard.
+func (b *Bot) sendToRefWithKeyboard(ctx context.Context, ref state.ChatRef, text string, kb telego.InlineKeyboardMarkup) (int, error) {
+	return b.sendChunk(ctx, ref, text, &kb)
 }
 
-func (b *Bot) sendChunk(ctx context.Context, topicID int, text string, kb *telego.InlineKeyboardMarkup) (int, error) {
+func (b *Bot) sendChunk(ctx context.Context, ref state.ChatRef, text string, kb *telego.InlineKeyboardMarkup) (int, error) {
 	html := format.ToHTML(text)
 	params := &telego.SendMessageParams{
-		ChatID:          telego.ChatID{ID: b.cfg.GroupChatID},
-		MessageThreadID: topicID,
+		ChatID:          telego.ChatID{ID: ref.ChatID},
+		MessageThreadID: ref.ThreadID,
 		Text:            html,
 		ParseMode:       telego.ModeHTML,
 	}
@@ -47,8 +48,8 @@ func (b *Bot) sendChunk(ctx context.Context, topicID int, text string, kb *teleg
 		// Retry with plain text on parse error
 		if strings.Contains(err.Error(), "can't parse") || strings.Contains(err.Error(), "Bad Request") {
 			plain := &telego.SendMessageParams{
-				ChatID:          telego.ChatID{ID: b.cfg.GroupChatID},
-				MessageThreadID: topicID,
+				ChatID:          telego.ChatID{ID: ref.ChatID},
+				MessageThreadID: ref.ThreadID,
 				Text:            text,
 			}
 			if kb != nil {
@@ -72,10 +73,10 @@ func (b *Bot) sendChunk(ctx context.Context, topicID int, text string, kb *teleg
 }
 
 // editTopicMsg edits a previously sent message.
-func (b *Bot) editTopicMsg(ctx context.Context, msgID int, text string) {
+func (b *Bot) editTopicMsg(ctx context.Context, ref state.ChatRef, msgID int, text string) {
 	html := format.ToHTML(text)
 	_, err := b.tg.EditMessageText(ctx, &telego.EditMessageTextParams{
-		ChatID:    telego.ChatID{ID: b.cfg.GroupChatID},
+		ChatID:    telego.ChatID{ID: ref.ChatID},
 		MessageID: msgID,
 		Text:      html,
 		ParseMode: telego.ModeHTML,
@@ -86,10 +87,10 @@ func (b *Bot) editTopicMsg(ctx context.Context, msgID int, text string) {
 }
 
 // removeKeyboard removes the inline keyboard from a message.
-func (b *Bot) removeKeyboard(ctx context.Context, msgID int) {
+func (b *Bot) removeKeyboard(ctx context.Context, ref state.ChatRef, msgID int) {
 	empty := telego.InlineKeyboardMarkup{}
 	_, err := b.tg.EditMessageReplyMarkup(ctx, &telego.EditMessageReplyMarkupParams{
-		ChatID:      telego.ChatID{ID: b.cfg.GroupChatID},
+		ChatID:      telego.ChatID{ID: ref.ChatID},
 		MessageID:   msgID,
 		ReplyMarkup: &empty,
 	})

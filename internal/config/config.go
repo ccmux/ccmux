@@ -22,15 +22,15 @@ type Config struct {
 	ClaudeCommand   string
 
 	// Paths
-	StateDir         string
-	StateFile        string
-	SessionMapFile   string
+	StateDir          string
+	StateFile         string
+	SessionMapFile    string
 	ClaudeProjectsDir string
 
 	// Behavior
-	PollInterval   time.Duration
-	QuietMode      bool
-	ShowToolCalls  bool
+	PollInterval  time.Duration
+	QuietMode     bool
+	ShowToolCalls bool
 }
 
 func Load() (*Config, error) {
@@ -64,11 +64,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("TELEGRAM_BOT_TOKEN is required")
 	}
 
-	groupID, err := parseInt64("TELEGRAM_GROUP_ID")
-	if err != nil {
-		return nil, fmt.Errorf("TELEGRAM_GROUP_ID is required and must be a number")
+	if v := os.Getenv("TELEGRAM_GROUP_ID"); v != "" {
+		groupID, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("TELEGRAM_GROUP_ID must be a number, got %q", v)
+		}
+		cfg.GroupChatID = groupID
 	}
-	cfg.GroupChatID = groupID
 
 	users := os.Getenv("ALLOWED_USERS")
 	if users == "" {
@@ -137,12 +139,4 @@ func getDurationOr(key string, def time.Duration) time.Duration {
 		return def
 	}
 	return d
-}
-
-func parseInt64(key string) (int64, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return 0, fmt.Errorf("missing %s", key)
-	}
-	return strconv.ParseInt(strings.TrimSpace(v), 10, 64)
 }

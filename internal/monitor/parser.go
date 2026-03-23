@@ -14,23 +14,23 @@ type jsonlLine struct {
 }
 
 type jsonlMessage struct {
-	Role    string           `json:"role"`
-	Content []contentBlock   `json:"content"`
+	Role    string         `json:"role"`
+	Content []contentBlock `json:"content"`
 }
 
 type contentBlock struct {
-	Type    string          `json:"type"`
-	Text    string          `json:"text,omitempty"`
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
 	// thinking
-	Thinking string         `json:"thinking,omitempty"`
+	Thinking string `json:"thinking,omitempty"`
 	// tool_use
-	ID      string          `json:"id,omitempty"`
-	Name    string          `json:"name,omitempty"`
-	Input   json.RawMessage `json:"input,omitempty"`
+	ID    string          `json:"id,omitempty"`
+	Name  string          `json:"name,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
 	// tool_result
-	ToolUseID string         `json:"tool_use_id,omitempty"`
+	ToolUseID string          `json:"tool_use_id,omitempty"`
 	Content   json.RawMessage `json:"content,omitempty"`
-	IsError   bool           `json:"is_error,omitempty"`
+	IsError   bool            `json:"is_error,omitempty"`
 }
 
 // Parser parses JSONL lines and maintains pending tool state across poll cycles.

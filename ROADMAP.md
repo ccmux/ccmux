@@ -13,3 +13,5 @@
   - [ ] Interactive config creation (bot token, chat IDs, etc.)
   - [ ] System service installation (systemd / launchd)
 
+- [ ] **Session attach shortcut** — `ccmux attach group:topic` to attach to a named tmux window (e.g. `ccmux attach myteam:project1`, `ccmux attach john` for DMs)
+

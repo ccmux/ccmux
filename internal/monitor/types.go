@@ -8,7 +8,7 @@ const (
 	KindThinking   EntryKind = "thinking"
 	KindToolUse    EntryKind = "tool_use"
 	KindToolResult EntryKind = "tool_result"
-	KindDone       EntryKind = "done"       // Claude finished (Stop hook or transcript end)
+	KindDone       EntryKind = "done" // Claude finished (Stop hook or transcript end)
 )
 
 // ParsedEntry is a single display-ready message from the monitor.

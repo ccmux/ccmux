@@ -1,9 +1,24 @@
 package state
 
-// TopicBinding maps a Telegram forum topic to a tmux window.
-type TopicBinding struct {
-	WindowID   string `json:"window_id"`   // e.g. "@12"
-	WindowName string `json:"window_name"` // display name
+import "fmt"
+
+// ChatRef uniquely identifies a conversation: a Telegram chat + optional thread.
+// ThreadID is 0 for DMs and plain groups.
+type ChatRef struct {
+	ChatID   int64 `json:"chat_id"`
+	ThreadID int   `json:"thread_id"`
+}
+
+// Key returns a stable string key for use in maps.
+func (r ChatRef) Key() string {
+	return fmt.Sprintf("%d/%d", r.ChatID, r.ThreadID)
+}
+
+// ConvBinding maps a ChatRef to a tmux window.
+type ConvBinding struct {
+	ChatRef    ChatRef `json:"chat_ref"`
+	WindowID   string  `json:"window_id"`   // e.g. "@12" (tmux internal ID)
+	WindowName string  `json:"window_name"` // e.g. "U123456789", "G100123_42"
 }
 
 // WindowState is per-window metadata written by the hook.
@@ -22,24 +37,28 @@ type TrackedSession struct {
 
 // BotState is the top-level persisted state document.
 type BotState struct {
-	// GroupChatID is the Telegram supergroup chat ID (negative number).
-	// Stored here as a convenience; also set in config.
-	GroupChatID int64 `json:"group_chat_id,omitempty"`
-
-	// TopicBindings: topic_id (string) → TopicBinding
-	TopicBindings map[string]TopicBinding `json:"topic_bindings"`
+	// ConvBindings: ChatRef.Key() → ConvBinding
+	ConvBindings map[string]ConvBinding `json:"conv_bindings"`
 
 	// WindowStates: window_id → WindowState (from session_map.json, merged at startup)
 	WindowStates map[string]WindowState `json:"window_states"`
 
 	// TrackedSessions: session_id → TrackedSession (monitor byte offsets)
 	TrackedSessions map[string]TrackedSession `json:"tracked_sessions"`
+
+	// Aliases: human-readable name → window name (for ccmux attach)
+	Aliases map[string]string `json:"aliases"`
+
+	// TopicNames: window name → Telegram topic name (cached)
+	TopicNames map[string]string `json:"topic_names"`
 }
 
 func New() *BotState {
 	return &BotState{
-		TopicBindings:   make(map[string]TopicBinding),
+		ConvBindings:    make(map[string]ConvBinding),
 		WindowStates:    make(map[string]WindowState),
 		TrackedSessions: make(map[string]TrackedSession),
+		Aliases:         make(map[string]string),
+		TopicNames:      make(map[string]string),
 	}
 }
