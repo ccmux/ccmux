@@ -33,16 +33,18 @@ func buildVersion() string {
 
 func newRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           "ccmux",
-		Short:         "Telegram bridge for Claude Code",
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:              "ccmux",
+		Short:            "Telegram bridge for Claude Code",
+		Version:          buildVersion(),
+		SilenceUsage:     true,
+		SilenceErrors:    true,
 	}
+
+	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.AddCommand(
 		newGatewayCommand(),
 		newHookCommand(),
-		newVersionCommand(),
 	)
 
 	return cmd

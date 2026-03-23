@@ -1,0 +1,30 @@
+# Binaries / build artifacts
+bin/
+build/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/ccmux
+
+# Secrets & config
+.env
+config.json
+config/config.json
+
+# Coverage
+coverage.txt
+coverage.html
+
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Windows
+*.syso
